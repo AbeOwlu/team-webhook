@@ -4,7 +4,7 @@ import (
 	"flag"
 	"net/http"
 
-	"example-webhook.com/internal/handlers"
+	"github.com/AbeOwlu/team-webhook/internal/handlers"
 
 	"go.uber.org/zap"
 )

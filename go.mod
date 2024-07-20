@@ -1,4 +1,4 @@
-module example-webhook.com
+module github.com/AbeOwlu/team-webhook
 
 go 1.22.1
 
