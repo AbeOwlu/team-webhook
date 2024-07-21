@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nsvalidating
+  namespace: webhooks
+  labels:
+    team: namespace
+    webhook: test
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      team: namespace
+      webhook: test
+  template:
+    metadata:
+      labels:
+        webhook: test
+    spec:
+      containers:
+        - name: nsvalidating
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8443
+              protocol: TCP
+          volumeMounts:
+          - name: certs
+            mountPath: "/etc/certs"
+            readOnly: true
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      volumes:
+      - name: certs
+        secret:
+          secretName: tlssecret
+
+---
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: webhooks
+  labels:
+    team: namespace
+    webhook: testing
