@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -xe
+
 Help(){
     echo  -e "Usage: cert.sh <kube-service> <service-namepsace> <secret-name>"
 }
@@ -9,17 +11,17 @@ if [ "$#" -ne 3 ]; then
     exit
 fi
 
-service=41
+service=$1
 namepsace=$2
 secret=$3
 
 csrname=${service}.${namepsace}
-tmpdir=$(mktmp -d -q)
+tmpdir=$(mktemp -d -q)
 
 echo -e "creating certs in temp working dir ${tmpdir}"
 
 touch ${tmpdir}/${service}.conf
-# cat <<EOF> ${tmpwdir}/${service}.conf
+cat <<EOF> ${tmpdir}/${service}.conf
 [req]
 distinguished_name = req_distinguished_name
 req_extensions = v3_req
@@ -28,8 +30,8 @@ prompt = no
 [req_distinguished_name]
 [ v3_req ]
 basicConstraints = CA:FALSE
-keyUsage = digitalSignature, contentCommitment, keyEncipherment
-extendedKeyUsage = serverAAuth
+keyUsage = digitalSignature, nonRepudiation, keyEncipherment
+extendedKeyUsage = serverAuth
 subjectAltName = @alt_names
 
 [alt_names]
@@ -41,7 +43,7 @@ EOF
 # gen CA key
 openssl genrsa -out ${tmpdir}/key.pem 2048
 # create csr no sign
-openssl req x509 -new -key ${tmpdir}/key.pem -subj "/CN=${service}.${namespace}.svc" -out ${tmpdir}/${service}.csr -config ${tmpdir}/${service}.conf
+openssl req -new -key ${tmpdir}/key.pem -subj "/CN=${service}.${namespace}.svc" -out ${tmpdir}/${service}.csr -config ${tmpdir}/${service}.conf
 
 kubectl delete csr ${csrname} 2>/dev/null || true
 
@@ -52,8 +54,7 @@ kind: CertificateSigningRequest
 metadata:
   name: ${csrname}
 spec:
-  group:
-  - system:authenticated
+  signerName: kubernetes.io/kubelet-serving
   request: $(cat ${tmpdir}/${service}.csr | base64 | tr -d "\n")
   usages:
   - server auth
@@ -62,9 +63,9 @@ spec:
 EOF
 
 while true; do
-    kubectl get csr ${scrname}
+    kubectl get csr ${csrname}
     if [ "$?" -eq 0 ]; then
-        berak
+        break
     fi
 done
 
@@ -72,17 +73,18 @@ done
 kubectl certificate approve ${csrname}
 
 # check certificate status for issued,approved update
-for x in ${1..10}; do
+for x in {1..9}; do
     serverCert=$(kubectl get csr ${csrname} -o jsonpath='{.status.certificate}') || true
-    serverStatus=$(kubectl get csr ${csrname} -o jsonpath='{.status.conditions.status}') || true
+    serverStatus=$(kubectl get csr ${csrname} -o jsonpath='{.status.conditions[].status}') || true
     if [[ ${serverCert} != '' ]]; then
-        berak
+        break
     fi
     sleep 1
 done
-if [[ ${serverCert} == '' ] || [[ ${serverStatus} == "Denied" ]]]; then
-    echo "Certificate not approved. Giving up after 10 attempts. Manually check cert: ${csrname}" >&1
-    exit 1
+if [[ ${serverCert} == '' ]] || [[ ${serverStatus} == "Denied" ]]; then
+    echo "Certificate not issued. Giving up after 10 attempts. Manually check cert: ${csrname}" >&1
+    kubectl certificate approve ${csrname}
+    sleep 3
 fi
 
 echo ${serverCert} | openssl base64 -d -A -out ${tmpdir}/cert.pem

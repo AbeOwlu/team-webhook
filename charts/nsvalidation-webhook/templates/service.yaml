@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "nsvalidation-webhook.fullname" . }}
+  labels:
+    {{- include "nsvalidation-webhook.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - port: {{ .Values.service.port }}
+      targetPort: {{ .Values.port }}
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "nsvalidation-webhook.selectorLabels" . | nindent 4 }}
