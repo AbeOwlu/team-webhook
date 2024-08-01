@@ -8,7 +8,7 @@ Help(){
 
 if [ "$#" -ne 3 ]; then
     Help
-    exit 1s
+    exit
 fi
 
 service=$1
@@ -19,10 +19,7 @@ secret=$3
 kubectl create namespace ${namespace} || true
 
 # Retrice cluster CA in configmap extension-apiserver-authentication; and generate tls secret
-CA_BUNDLE=`kubectl get configmap -n kube-system extension-apiserver-authentication -o=jsonpath='{.data.client-ca-file}' | base64 | tr -d '\n'`
+# CA_BUNDLE=`kubectl get configmap -n kube-system extension-apiserver-authentication -o=jsonpath='{.data.client-ca-file}' | base64 | tr -d '\n'`
 ./cert.sh $service $namespace $secret
-
-# update webhook deployment file client service CA_BUNDLE
-sed -i "s/CA_BUNDLE/$CA_BUNDLE/g" ./webhook.yaml
 
 kubectl apply -f ./webhook.yaml

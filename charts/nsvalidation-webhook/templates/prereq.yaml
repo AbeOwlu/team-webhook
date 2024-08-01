@@ -2,19 +2,19 @@ apiVersion: batch/v1
 kind: Job
 metadata:
   name: "{{ include "nsvalidation-webhook.fullname" . }}-prereq-job"
-  namespace: kube-system
+  namespace: {{ .Values.namespace }}
   labels:
     {{- include "nsvalidation-webhook.labels" . | nindent 4 }}
   annotations:
-    "helm.sh/hook": pre-install
-    "helm.sh/hook-weight": "2"
-    "helm.sh/hook-delete-policy": hook-succeeded,hook-failed
+    "helm.sh/hook": "pre-install"
+    "helm.sh/hook-weight": "-100"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-failed
 spec:
   template:
     spec:
       containers:
       - name: "{{ include "nsvalidation-webhook.fullname" . }}-prereq"
-        image: public.ecr.aws/abeowlu/nsvalidation-webhook:req        
-        args: ['{{ include "nsvalidation-webhook.fullname" . }},{{ .Values.namespace }},"tlssecret"']
+        image: public.ecr.aws/abeowlu/nsvalidation-webhook:req
+        args: ["{{ include "nsvalidation-webhook.fullname" . }}", "{{ .Values.namespace }}", "{{ .Values.webhookCert }}"]
       restartPolicy: Never
       serviceAccountName: "{{ include "nsvalidation-webhook.fullname" . }}-sa"

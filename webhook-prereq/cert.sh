@@ -41,55 +41,73 @@ DNS.3 = ${service}.${namespace}.svc
 EOF
 
 # gen CA key
+openssl genrsa -out ${tmpdir}/ca.key 2048
+openssl req -new -x509 -days 3650 -nodes -key ${tmpdir}/ca.key -out ${tmpdir}/ca.crt -subj "/CN=admissiona_cert_ca"
+
+# gen rsa and sign with CA above
 openssl genrsa -out ${tmpdir}/key.pem 2048
-# create csr no sign
+# create csr and sign
 openssl req -new -key ${tmpdir}/key.pem -subj "/CN=${service}.${namespace}.svc" -out ${tmpdir}/${service}.csr -config ${tmpdir}/${service}.conf
-
-kubectl delete csr ${csrname} 2>/dev/null || true
-
-# https://kubernetes.io/docs/reference/access-authn-authz/certificate-signing-requests/#create-certificatessigningrequest
-cat <<EOF | kubectl apply -f -
-apiVersion: certificates.k8s.io/v1beta1
-kind: CertificateSigningRequest
-metadata:
-  name: ${csrname}
-spec:
-  signerName: kubernetes.io/kubelet-serving
-  request: $(cat ${tmpdir}/${service}.csr | base64 | tr -d "\n")
-  usages:
-  - server auth
-  - digital signature
-  - key encipherment
-EOF
-
-while true; do
-    kubectl get csr ${csrname}
-    if [ "$?" -eq 0 ]; then
-        break
-    fi
-done
-
-# approve csr for KAS to the webhook
-kubectl certificate approve ${csrname}
-
-# check certificate status for issued,approved update
-for x in {1..9}; do
-    serverCert=$(kubectl get csr ${csrname} -o jsonpath='{.status.certificate}') || true
-    serverStatus=$(kubectl get csr ${csrname} -o jsonpath='{.status.conditions[].status}') || true
-    if [[ ${serverCert} != '' ]]; then
-        break
-    fi
-    sleep 1
-done
-if [[ ${serverCert} == '' ]] || [[ ${serverStatus} == "Denied" ]]; then
-    echo "Certificate not issued. Giving up after 10 attempts. Manually check cert: ${csrname}" >&1
-    kubectl certificate approve ${csrname}
-    sleep 3
-fi
-
-echo ${serverCert} | openssl base64 -d -A -out ${tmpdir}/cert.pem
+openssl x509 -req -days 365 -in ${tmpdir}/${service}.csr -CA ${tmpdir}/ca.crt -CAkey ${tmpdir}/ca.key -CAcreateserial -out ${tmpdir}/server.pem -extensions v3_req -extfile ${tmpdir}/${service}.conf
+# openssl x509 -req -in ${tmpdir}/${service}.csr -CA  ${tmpdir}/ca.crt -CAkey ${tmpdir}/ca.key -CAcreateserial -out ${tmpdir}/server.pem -days 365 -extensions v3_req -extfile csr.conf
 
 # create tls secret for webhook
-kubectl create secret -n ${namepsace} ${secret} \
---cert=${tmpdir}/cert.pem \
+kubectl create secret tls ${secret} -n ${namepsace} \
+--cert=${tmpdir}/server.pem \
 --key=${tmpdir}/key.pem
+
+# create the caBundle as a secret
+kubeclt create secrete generic cabundle -n ${namepsace} \
+--from-file=cabundle=${tmpdir}/ca.crt 
+
+# export CA_BUNDLE=$(cat ${tmpdir}/ca.crt | base64 | tr -d '\n')
+
+# update webhook deployment file client service CA_BUNDLE
+# sed -i '' "s/CA_BUNDLE/$CA_BUNDLE/g" ./webhook.yaml
+
+# everything hear is deprecated after kubernetes v1.22 - user cert-manager or manual cert injection
+# kubectl delete csr ${csrname} 2>/dev/null || true
+
+# # https://kubernetes.io/docs/reference/access-authn-authz/certificate-signing-requests/#create-certificatessigningrequest
+# cat <<EOF | kubectl apply -f -
+# apiVersion: certificates.k8s.io/v1
+# kind: CertificateSigningRequest
+# metadata:
+#   name: ${csrname}
+# spec:
+#   signerName: kubernetes.io/kubelet-serving
+#   request: $(cat ${tmpdir}/${service}.csr | base64 | tr -d "\n")
+#   usages:
+#   - server auth
+#   - digital signature
+#   - key encipherment
+# EOF
+
+# while true; do
+#     kubectl get csr ${csrname}
+#     if [ "$?" -eq 0 ]; then
+#         break
+#     fi
+# done
+
+# # approve csr for KAS to the webhook
+# kubectl certificate approve ${csrname}
+
+# # check certificate status for issued,approved update
+# for x in {1..9}; do
+#     serverCert=$(kubectl get csr ${csrname} -o jsonpath='{.status.certificate}') || true
+#     serverStatus=$(kubectl get csr ${csrname} -o jsonpath='{.status.conditions[].status}') || true
+#     if [[ ${serverCert} != '' ]]; then
+#         break
+#     fi
+#     sleep 1
+# done
+# if [[ ${serverCert} == '' ]] || [[ ${serverStatus} == "Denied" ]]; then
+#     echo "Certificate not issued. Giving up after 10 attempts. Manually check cert: ${csrname}" >&1
+#     kubectl certificate approve ${csrname}
+#     sleep 3
+#     serverCert=$(kubectl get csr ${csrname} -o jsonpath='{.status.certificate}') || true
+# fi
+
+# echo ${serverCert} | openssl base64 -d -A -out ${tmpdir}/cert.pem
+
