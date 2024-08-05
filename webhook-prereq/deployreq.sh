@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 set -xe
 
@@ -20,6 +20,7 @@ kubectl create namespace ${namespace} || true
 
 # Retrice cluster CA in configmap extension-apiserver-authentication; and generate tls secret
 # CA_BUNDLE=`kubectl get configmap -n kube-system extension-apiserver-authentication -o=jsonpath='{.data.client-ca-file}' | base64 | tr -d '\n'`
-./cert.sh $service $namespace $secret
+# Stale remove this script and streamline into cert.sh
+source ./cert.sh $service $namespace $secret
 
 kubectl apply -f ./webhook.yaml

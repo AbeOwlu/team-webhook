@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 set -xe
 
@@ -52,20 +52,34 @@ openssl x509 -req -days 365 -in ${tmpdir}/${service}.csr -CA ${tmpdir}/ca.crt -C
 # openssl x509 -req -in ${tmpdir}/${service}.csr -CA  ${tmpdir}/ca.crt -CAkey ${tmpdir}/ca.key -CAcreateserial -out ${tmpdir}/server.pem -days 365 -extensions v3_req -extfile csr.conf
 
 # create tls secret for webhook
+kubectl delete secret ${secret} -n ${namepsace} || true
+sleep 1
+
 kubectl create secret tls ${secret} -n ${namepsace} \
 --cert=${tmpdir}/server.pem \
 --key=${tmpdir}/key.pem
 
-# create the caBundle as a secret
-kubeclt create secrete generic cabundle -n ${namepsace} \
---from-file=cabundle=${tmpdir}/ca.crt 
+# # create the caBundle as a secret
+# kubectl delete secret cabundle -n ${namepsace} || true
+# sleep 1
 
-# export CA_BUNDLE=$(cat ${tmpdir}/ca.crt | base64 | tr -d '\n')
+# kubeclt create secret generic cabundle -n ${namepsace} \
+# --from-file=cabundle=${tmpdir}/ca.crt 
 
-# update webhook deployment file client service CA_BUNDLE
-# sed -i '' "s/CA_BUNDLE/$CA_BUNDLE/g" ./webhook.yaml
+export CA_BUNDLE=$(cat ${tmpdir}/ca.crt | base64 | tr -d '\n')
 
-# everything hear is deprecated after kubernetes v1.22 - user cert-manager or manual cert injection
+update webhook deployment file client service CA_BUNDLE
+sed -i "s/CA_BUNDLE/$CA_BUNDLE/g" ./webhook.yaml
+
+
+####------------------------------------------------------------------#####
+
+## Breaking change with kubernets apiVersion <1.22
+
+####------------------------------------------------------------------#####
+
+
+# everything here is deprecated after kubernetes v1.22 - user cert-manager or manual cert injection
 # kubectl delete csr ${csrname} 2>/dev/null || true
 
 # # https://kubernetes.io/docs/reference/access-authn-authz/certificate-signing-requests/#create-certificatessigningrequest
@@ -110,4 +124,3 @@ kubeclt create secrete generic cabundle -n ${namepsace} \
 # fi
 
 # echo ${serverCert} | openssl base64 -d -A -out ${tmpdir}/cert.pem
-
