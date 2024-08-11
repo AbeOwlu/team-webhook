@@ -51,8 +51,8 @@ openssl req -new -key ${tmpdir}/key.pem -subj "/CN=${service}.${namespace}.svc" 
 openssl x509 -req -days 365 -in ${tmpdir}/${service}.csr -CA ${tmpdir}/ca.crt -CAkey ${tmpdir}/ca.key -CAcreateserial -out ${tmpdir}/server.pem -extensions v3_req -extfile ${tmpdir}/${service}.conf
 # openssl x509 -req -in ${tmpdir}/${service}.csr -CA  ${tmpdir}/ca.crt -CAkey ${tmpdir}/ca.key -CAcreateserial -out ${tmpdir}/server.pem -days 365 -extensions v3_req -extfile csr.conf
 
-# create tls secret for webhook
-kubectl delete secret ${secret} -n ${namepsace} || true
+# create tls secret for webhook and debug timeout issues
+kubectl delete secret ${secret} -n ${namepsace} -v=9 || true
 sleep 1
 
 kubectl create secret tls ${secret} -n ${namepsace} \
@@ -68,7 +68,7 @@ kubectl create secret tls ${secret} -n ${namepsace} \
 
 export CA_BUNDLE=$(cat ${tmpdir}/ca.crt | base64 | tr -d '\n')
 
-update webhook deployment file client service CA_BUNDLE
+# update webhook deployment file client service CA_BUNDLE
 sed -i "s/CA_BUNDLE/$CA_BUNDLE/g" ./webhook.yaml
 
 

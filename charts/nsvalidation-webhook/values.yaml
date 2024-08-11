@@ -28,6 +28,7 @@ serviceAccount:
 port: 8443
 
 service:
+  name: ""
   type: ClusterIP
   port: 443
 

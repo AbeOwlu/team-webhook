@@ -9,9 +9,7 @@ RUN apk update && \
     chmod u+x deployreq.sh && \
     chmod u+x cert.sh && \
     curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl" && \
-    chmod u+x kubectl && \
-    mkdir -p ~/.local/bin && \
-    mv ./kubectl ~/.local/bin/kubectl && \
-    PATH=$PATH:$HOME/.local/bin
+    chmod +x kubectl && \
+    mv ./kubectl /usr/local/bin/kubectl
 
-CMD [ "./deployreq.sh" ]
+ENTRYPOINT [ "./deployreq.sh" ]

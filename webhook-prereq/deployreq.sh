@@ -23,4 +23,7 @@ kubectl create namespace ${namespace} || true
 # Stale remove this script and streamline into cert.sh
 source ./cert.sh $service $namespace $secret
 
+# export service name if custom name supplied and update webhook configuration
+export SERVICE_NAME=$service
+sed -i "s/SERVICE_NAME/$SERVICE_NAME/g" ./webhook.yaml
 kubectl apply -f ./webhook.yaml

@@ -5,7 +5,7 @@ kind: ValidatingWebhookConfiguration
 metadata:
   name: "nsvalidation-webhook"
 webhooks:
-  - name: "nsvalidation-webhook.svc.cluster.local"
+  - name: "SERVICE_NAME.svc.cluster.local"
     admissionReviewVersions: ["v1", "v1beta1"]
     failurePolicy: Fail
     timeoutSeconds: 2
@@ -18,7 +18,7 @@ webhooks:
     clientConfig:
       service:
         namespace: "webhooks"
-        name: "nsvalidating"
+        name: "SERVICE_NAME"
         path: "/validate"
       caBundle: "CA_BUNDLE"
     admissionReviewVersions: ["v1", "v1beta1"]

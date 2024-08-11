@@ -60,3 +60,11 @@ Create the name of the service account to use
 {{- default "default" .Values.serviceAccount.name }}
 {{- end }}
 {{- end }}
+
+{{- define "webhook-svc" -}}
+{{- if .Values.service.name }}
+{{- default .Values.service.name (include "nsvalidation-webhook.fullname" .) }}
+{{- else }}
+{{- include "nsvalidation-webhook.fullname" . }}
+{{- end }}
+{{- end }}

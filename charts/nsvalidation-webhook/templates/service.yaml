@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "nsvalidation-webhook.fullname" . }}
+  name: {{ include "webhook-svc" . }}
   labels:
     {{- include "nsvalidation-webhook.labels" . | nindent 4 }}
 spec:
