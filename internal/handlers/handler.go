@@ -18,8 +18,7 @@ const (
 )
 
 var (
-	TLScert, TLSkey string
-	DenyStatus      metav1.Status = metav1.Status{
+	DenyStatus metav1.Status = metav1.Status{
 		Message: InvalidMessage,
 		Status:  metav1.StatusFailure,
 		Code:    400,

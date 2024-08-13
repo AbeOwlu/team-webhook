@@ -9,8 +9,9 @@ import (
 	"go.uber.org/zap"
 )
 
-const (
-// default message
+var (
+	TLScert, TLSkey string
+	port            string = ":8443"
 )
 
 func main() {
@@ -18,13 +19,13 @@ func main() {
 	defer loggInit.Sync()
 	logger := loggInit.Sugar()
 
-	flag.StringVar(&handlers.TLScert, "tlscert", "/etc/certs/tls.crt", "Generated Webhook server cert")
-	flag.StringVar(&handlers.TLSkey, "tlskey", "/etc/certs/tls.key", "Generated Webhook server key")
+	flag.StringVar(&TLScert, "tlscert", "/etc/certs/tls.crt", "Generated Webhook server cert")
+	flag.StringVar(&TLSkey, "tlskey", "/etc/certs/tls.key", "Generated Webhook server key")
 	flag.Parse()
 
 	http.HandleFunc("/", handlers.HandleFunc)
 
-	err := http.ListenAndServeTLS(":8443", handlers.TLScert, handlers.TLSkey, nil)
+	err := http.ListenAndServeTLS(port, TLScert, TLSkey, nil)
 	if err != nil {
 		logger.Fatal("Webhook error: %v",
 			err)

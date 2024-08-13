@@ -42,7 +42,7 @@ EOF
 
 # gen CA key
 openssl genrsa -out ${tmpdir}/ca.key 2048
-openssl req -new -x509 -days 3650 -nodes -key ${tmpdir}/ca.key -out ${tmpdir}/ca.crt -subj "/CN=admissiona_cert_ca"
+openssl req -new -x509 -days 3650 -nodes -key ${tmpdir}/ca.key -out ${tmpdir}/ca.crt -subj "/CN=admission_ca"
 
 # gen rsa and sign with CA above
 openssl genrsa -out ${tmpdir}/key.pem 2048
