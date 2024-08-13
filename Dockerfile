@@ -2,15 +2,16 @@ FROM golang:1.22-alpine AS builder
 
 WORKDIR /webhook-server
 
-COPY go.mod go.sum ./
+COPY . ./
 ENV GOPROXY=https://goproxy.io,direct
-RUN go mod download
+ENV GOPRIVATE=github.com/AbeOwlu/team-webhook/*
 
-COPY ./cmd/*/*.go ./internal/*/*.go ./
-RUN CGO_ENABLED=0 GOOS=linux go build -o main
+RUN go mod download && \
+    go mod tidy && \
+    CGO_ENABLED=0 GOOS=linux go build ./cmd/webhook/main.go
 
 
-FROM scratch
+FROM alpine
 COPY --from=builder /webhook-server/main /
 
 ENTRYPOINT [ "/main" ]

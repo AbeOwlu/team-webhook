@@ -14,7 +14,6 @@ const (
 	// const invalid err meassage
 	InvalidMessage = "namespace missing required team label"
 	requiredLabel  = "team"
-	port           = ":8443"
 )
 
 var (
@@ -49,8 +48,6 @@ func HandleFunc(w http.ResponseWriter, r *http.Request) {
 	logger := loggInit.Sugar()
 
 	arReview := v1beta1.AdmissionReview{}
-	raw := arReview.Request.Object.Raw
-	ns := Namespace{}
 
 	if err := json.NewDecoder(r.Body).Decode(&arReview); err != nil {
 		logger.Error("client messge: %v, err response: %v", r.Body, err.Error())
@@ -61,6 +58,11 @@ func HandleFunc(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid request body", http.StatusBadRequest)
 		return
 	}
+
+	// unmarshalled Admission Request Payload
+	// https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#webhook-request-and-response
+	raw := arReview.Request.Object.Raw
+	ns := Namespace{}
 
 	if err := json.Unmarshal(raw, &ns); err != nil {
 		logger.Error("client messge: %v, err response: %v", r.Body, err.Error())
