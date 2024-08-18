@@ -1,14 +1,19 @@
 package handlers
 
 import (
+	"crypto/tls"
 	"encoding/json"
 	"net/http"
+	"os"
 
 	"go.uber.org/zap"
 
 	"k8s.io/api/admission/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
+
+var loggInit = zap.NewExample()
+var logger = loggInit.Sugar()
 
 const (
 	// const invalid err meassage
@@ -43,9 +48,8 @@ func (m *Metadata) isEmpty() bool {
 
 // function to validate resource creation based on authorized content
 func HandleFunc(w http.ResponseWriter, r *http.Request) {
-	loggInit := zap.NewExample()
+
 	defer loggInit.Sync()
-	logger := loggInit.Sugar()
 
 	arReview := v1beta1.AdmissionReview{}
 
@@ -88,5 +92,56 @@ func HandleFunc(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(&arReview)
+
+}
+
+// kubelet health and readiness probez
+
+func Healthz(w http.ResponseWriter, r *http.Request) {
+	healthz_path := r.RequestURI
+	if healthz_path == "/healthz" {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		logger.Infof("ns-Validator healthz : OK")
+	} else {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("Internal Error: Error Path: health probe paths is healthz"))
+	}
+
+}
+
+func Readyz(w http.ResponseWriter, r *http.Request) {
+	readyz_path := r.RequestURI
+	var con_check *int
+
+	if readyz_path == "/readyz" {
+		kas_endpoint := os.Getenv("KUBERNETES_PORT_443GO c_TCP_ADDR")
+		client := &http.Client{
+			Transport: &http.Transport{
+				TLSClientConfig: &tls.Config{},
+			},
+		}
+		// add "https://"+kas_endpoint to streamline check
+		req, err := http.NewRequest("GET", kas_endpoint, nil)
+		if err != nil {
+			logger.Error("Readyz error: failed building Kubernete API Server endpoint: %s : err: %v", kas_endpoint, err)
+		}
+
+		resp, err := client.Do(req)
+		if err != nil {
+			logger.Error("Readyz error: error connecting to Kubernetes API Server endpoint: err: %v", err)
+		}
+
+		con_check = &resp.StatusCode
+
+		if *con_check == 0 {
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte("Internal Error: Error Path: health probe paths is healthz"))
+		} else {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+		}
+
+	}
 
 }
