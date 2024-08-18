@@ -115,7 +115,7 @@ func Readyz(w http.ResponseWriter, r *http.Request) {
 	var con_check *int
 
 	if readyz_path == "/readyz" {
-		kas_endpoint := os.Getenv("KUBERNETES_PORT_443GO c_TCP_ADDR")
+		kas_endpoint := os.Getenv("KUBERNETES_PORT_443_TCP_ADDR")
 		client := &http.Client{
 			Transport: &http.Transport{
 				TLSClientConfig: &tls.Config{},
@@ -136,7 +136,8 @@ func Readyz(w http.ResponseWriter, r *http.Request) {
 
 		if *con_check == 0 {
 			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte("Internal Error: Error Path: health probe paths is healthz"))
+			w.Write([]byte("Internal Error: Kubernetes API Sever unreachable"))
+			logger.Error("Readyz error: Kubernete API Server endpoint: %s is unreachable", kas_endpoint, err)
 		} else {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusOK)
