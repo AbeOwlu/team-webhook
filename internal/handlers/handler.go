@@ -121,7 +121,7 @@ func Readyz(w http.ResponseWriter, r *http.Request) {
 				TLSClientConfig: &tls.Config{},
 			},
 		}
-		kas_endpoint = "https://" + kas_endpoint
+		kas_endpoint = "http://" + kas_endpoint
 		// add "https://"+kas_endpoint to streamline check
 		req, err := http.NewRequest("GET", kas_endpoint, nil)
 		if err != nil {
