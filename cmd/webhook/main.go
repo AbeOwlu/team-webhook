@@ -16,6 +16,7 @@ var (
 )
 
 func main() {
+	mux := http.NewServeMux()
 	loggInit := zap.NewExample()
 	defer loggInit.Sync()
 	logger := loggInit.Sugar()
@@ -24,9 +25,13 @@ func main() {
 	flag.StringVar(&TLSkey, "tlskey", "/etc/certs/tls.key", "Generated Webhook server key")
 	flag.Parse()
 
-	http.HandleFunc("/healthz", handlers.Healthz)
-	http.HandleFunc("/readyz", handlers.Readyz)
-	http.HandleFunc("/", handlers.HandleFunc)
+	mux.Handle("/healthz", http.HandlerFunc(handlers.Healthz))
+	mux.Handle("/readyz", http.HandlerFunc(handlers.Readyz))
+	mux.Handle("/", http.HandlerFunc(handlers.HandleFunc))
+
+	// http.HandleFunc("/healthz", handlers.Healthz)
+	// http.HandleFunc("/readyz", handlers.Readyz)
+	// http.HandleFunc("/", handlers.HandleFunc)
 
 	go func() {
 		err := http.ListenAndServe(probezPort, nil)
