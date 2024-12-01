@@ -34,14 +34,14 @@ func main() {
 	// http.HandleFunc("/", handlers.HandleFunc)
 
 	go func() {
-		err := http.ListenAndServe(probezPort, nil)
+		err := http.ListenAndServe(probezPort, mux)
 		if err != nil {
 			logger.Fatal("Webhook Probe error: %v",
 				err)
 		}
 	}()
 
-	err := http.ListenAndServeTLS(port, TLScert, TLSkey, nil)
+	err := http.ListenAndServeTLS(port, TLScert, TLSkey, mux)
 	if err != nil {
 		logger.Fatal("Webhook error: %v",
 			err)
